@@ -28,7 +28,7 @@ public class Tokenizer: Sequence, IteratorProtocol {
         // prefill buffer
         for _ in 1...buffer.tokens.count { updateBuffer() }
         
-        print(buffer)
+        // start condition
         assert(buffer.index == 0)
     }
 
