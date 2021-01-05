@@ -20,19 +20,19 @@ final class TokenizerTests: XCTestCase {
     func testPeek() throws {
         let input1 = "[a-z]"
         let tokenizer = Tokenizer(source: input1, symbols: Set(symbols), keywords: Set(keywords))
-        if tokenizer.peek(match: "[") {
+        if tokenizer.peek(ahead: 1) == .symbol("[") {
             tokenizer.consume()
         }
-        if tokenizer.peek(match: "a") {
+        if tokenizer.peek(ahead: 1) == .symbol("a") {
             tokenizer.consume()
         }
-        if tokenizer.peek(match: "-") {
+        if tokenizer.peek(ahead: 1) == .symbol("-") {
             tokenizer.consume()
         }
-        if tokenizer.peek(match: "z") {
+        if tokenizer.peek(ahead: 1) == .symbol("z") {
             tokenizer.consume()
         }
-        if tokenizer.peek(match: "]") {
+        if tokenizer.peek(ahead: 1) == .symbol("]") {
             tokenizer.consume()
         }
         XCTAssertTrue(tokenizer.isEmpty)
@@ -41,30 +41,14 @@ final class TokenizerTests: XCTestCase {
     func testMaximumMunch() throws {
         let input1 = "((?:(?|ab??*?+?"
         let tokenizer = Tokenizer(source: input1, symbols: Set(symbols), keywords: Set(keywords))
-        if tokenizer.peek(match: "(") {
-            tokenizer.consume()
-        }
-        if case let .symbol(sym) = tokenizer.nextToken() {
-            XCTAssertEqual(sym, "(?:")
-        }
-        if case let .symbol(sym) = tokenizer.nextToken() {
-            XCTAssertEqual(sym, "(?|")
-        }
-        if tokenizer.peek(match: "a") {
-            tokenizer.consume()
-        }
-        if tokenizer.peek(match: "b") {
-            tokenizer.consume()
-        }
-        if case let .symbol(sym) = tokenizer.nextToken() {
-            XCTAssertEqual(sym, "??")
-        }
-        if case let .symbol(sym) = tokenizer.nextToken() {
-            XCTAssertEqual(sym, "*?")
-        }
-        if case let .symbol(sym) = tokenizer.nextToken() {
-            XCTAssertEqual(sym, "+?")
-        }
+        
+        if tokenizer.peek(ahead: 1) == .symbol("(") { tokenizer.consume() }
+        if case let .symbol(sym) = tokenizer.next() { XCTAssertEqual(sym, "(?:") }
+        if case let .symbol(sym) = tokenizer.next() { XCTAssertEqual(sym, "(?|") }
+        if tokenizer.peek(ahead: 1) == .identifier("ab") { tokenizer.consume() }
+        if case let .symbol(sym) = tokenizer.next() { XCTAssertEqual(sym, "??") }
+        if case let .symbol(sym) = tokenizer.next() { XCTAssertEqual(sym, "*?") }
+        if case let .symbol(sym) = tokenizer.next() { XCTAssertEqual(sym, "+?") }
         XCTAssertTrue(tokenizer.isEmpty)
     }
     

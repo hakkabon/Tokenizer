@@ -1,30 +1,43 @@
 import Foundation
 
 public class Tokenizer: Sequence, IteratorProtocol {
+    
+    struct TokenBuffer {
+        var tokens: [Token?] = []
+        var index = 0
+    }
+    private var buffer: TokenBuffer = TokenBuffer()
+
     fileprivate var characters: UnicodeScalarView
     fileprivate var trie: Trie = Trie()
     private(set) var filterComments: Bool = false
-    private(set) var symbols = Set<String>()
+    private(set) var symbols = Set<String>(arrayLiteral: "'", "\"", "//", "/*", "*/")
     private(set) var keywords = Set<String>()
 
-    public init(source: String, filterComments filter: Bool = false, symbols: Set<String>, keywords: Set<String>) {
+    public init(source: String, buffer size: Int = 5, filterComments filter: Bool = false, symbols: Set<String>, keywords: Set<String>) {
+        buffer = TokenBuffer(tokens: Array(repeating: .none, count: size))
         characters = UnicodeScalarView(source.unicodeScalars)
 
         self.filterComments = filter
-        self.symbols = Set(symbols)
+        self.symbols = symbols.union(Set(symbols))
         self.keywords = Set(keywords)
 
         // Insert all character-based symbols into the Trie.
         symbols.forEach { trie.insert(word: $0) }
+        
+        // prefill buffer
+        for _ in 1...buffer.tokens.count { updateBuffer() }
+        
+        print(buffer)
+        assert(buffer.index == 0)
     }
 
-    // Generates an array of tokens from a source string. This is a very simple tokenizer
-    // that parses basic arithmetic expressions.
+    // Generates an array of tokens from a source string.
     public func tokenize() -> [Token] {
         var tokens: [Token] = []
-        while var token = nextToken() {
+        while var token = next() {
             if filterComments {
-                while case .comment(_) = token { token = nextToken() ?? .invalid(.unexpectedEndOfTokens) }
+                while case .comment(_) = token { token = next() ?? .invalid(.unexpectedEndOfTokens) }
             }
             tokens.append(token)
         }
@@ -35,16 +48,19 @@ public class Tokenizer: Sequence, IteratorProtocol {
         return tokens
     }
     
+    /// Create an iterator.
     public func makeIterator() -> Tokenizer {
         return self
     }
 
+    /// Return a single token, or nil.
     public func next() -> Token? {
-        return nextToken()
+        let token = buffer.tokens[buffer.index]
+        updateBuffer()
+        return token
     }
     
-    // This only ever returns a single token, or nil
-    func nextToken() -> Token? {
+    private func nextToken() -> Token? {
         
         // Skip all irrelevant characters until we find something.
         characters.skipWhitespace()
@@ -93,25 +109,26 @@ public class Tokenizer: Sequence, IteratorProtocol {
         return nil
     }
     
-
+    /// Returns true if input string has been processed.
     public var isEmpty: Bool {
         return characters.isEmpty
     }
 
-    public var first: Character? {
-        return characters.isEmpty ? nil : Character(characters[characters.startIndex])
-    }
-    
+    /// Consumes one token from the buffer of tokens.
     public func consume() {
-        return characters.removeFirst()
+        updateBuffer()
     }
 
-    // Peek at current character for a symbol match.
-    public func peek(match symbol: Character) -> Bool {
-        if let scalar = characters.first, symbol == Character(scalar) {
-            return true
-        }
-        return false
+    /// Peek at current character for a symbol match.
+    public func peek(ahead n: Int) -> Token? {
+        assert((n>0) && n < buffer.tokens.count)
+        return buffer.tokens[(buffer.index+n-1) % buffer.tokens.count]
+    }
+
+    // Fills current slot with next token and increments current index.
+    private func updateBuffer() {
+        buffer.tokens[buffer.index] = nextToken()
+        buffer.index = (buffer.index+1) % buffer.tokens.count
     }
 }
 
