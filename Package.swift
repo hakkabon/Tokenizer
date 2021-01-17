@@ -7,7 +7,7 @@ let package = Package(
     name: "Tokenizer",
     products: [
         .library(name: "Tokenizer", targets: ["Tokenizer"]),
-        .executable(name: "tok", targets: ["tok"]),
+//        .executable(name: "tok", targets: ["tok"]),
     ],
     dependencies: [
         .package(name: "Files", url: "https://github.com/johnsundell/files.git", from: "2.2.1"),
@@ -15,11 +15,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "Tokenizer", dependencies: ["Files"]),
-        .target(
-            name: "tok",
-            dependencies: [
-                "Tokenizer",
-                "Files",
+        .target(name: "lex", dependencies: ["Tokenizer", "Files",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")]),
         .testTarget(name: "TokenizerTests", dependencies: ["Tokenizer"]),
     ]

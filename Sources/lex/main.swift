@@ -16,7 +16,7 @@ struct Tok: ParsableCommand {
     @Option(name: [.short, .long], parsing: .upToNextOption, help: "Keywords to tokenize")
     var keywords: [String] = []
     
-    @Flag(name: [.short, .long], help: "Strip comments form collected tokens")
+    @Flag(name: [.short, .long], help: "Strip comments from collected tokens")
     var filterComments: Bool = false
     
     mutating func run() throws {
