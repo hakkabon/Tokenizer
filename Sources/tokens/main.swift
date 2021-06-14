@@ -2,21 +2,21 @@ import ArgumentParser
 import Files
 import Tokenizer
 
-struct Tok: ParsableCommand {
+struct Tokens: ParsableCommand {
 
-    @Argument(help: "Text to tokenize")
+    @Argument(help: "string to tokenize")
     var arg: String = ""
     
-    @Option(help: "Input file")
+    @Option(name: [.short, .long], help: "input file")
     var inputFile: String = ""
     
-    @Option(name: [.short, .long], help: "Symbols to tokenize")
+    @Option(name: [.short, .long], help: "symbols to tokenize")
     var symbols: String = ""
     
-    @Option(name: [.short, .long], parsing: .upToNextOption, help: "Keywords to tokenize")
+    @Option(name: [.short, .long], parsing: .upToNextOption, help: "keywords to tokenize")
     var keywords: [String] = []
     
-    @Flag(name: [.short, .long], help: "Strip comments from collected tokens")
+    @Flag(name: [.short, .long], help: "strip comments from collected tokens")
     var filterComments: Bool = false
     
     mutating func run() throws {
@@ -27,6 +27,7 @@ struct Tok: ParsableCommand {
                                    symbols: Set(symbols.components(separatedBy: ",")),
                                    keywords: Set(keywords)).tokenize()
             print(tokens.map { $0.description }.joined(separator: ", "))
+
         } else if inputFile.count > 0  {
             
             do {
@@ -42,6 +43,6 @@ struct Tok: ParsableCommand {
     }
 }
 
-Tok.main()
+Tokens.main()
 
 

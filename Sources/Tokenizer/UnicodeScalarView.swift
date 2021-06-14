@@ -1,14 +1,18 @@
-// This is a really simple drop-in replacement for String.UnicodeScalarView
-// As of Swift 3.2, String.UnicodeScalarView no longer supports slice operations, and
-// String.UnicodeScalarView.Subsequence is ~5x slower
 //
-// Only a small subset of methods are implemented, specifically the ones useful for
-// implementing a parser or lexer that consumes a string by repeatedly calling popFirst()
+//  UnicodeScalarView.swift
+//  Tokenizer
 //
-// I've benchmarked popFirst() as ~1.2x faster than String.UnicodeScalarView in Swift 3.1
-// and ~7x faster than String.UnicodeScalarView.Subsequence in swift 3.2 and 4.0
+//  This is a really simple drop-in replacement for String.UnicodeScalarView
+//  As of Swift 3.2, String.UnicodeScalarView no longer supports slice operations, and
+//  String.UnicodeScalarView.Subsequence is ~5x slower
 //
-// Copyright © 2017 Nick Lockwood. All rights reserved.
+//  Only a small subset of methods are implemented, specifically the ones useful for
+//  implementing a parser or lexer that consumes a string by repeatedly calling popFirst()
+//
+//  I've benchmarked popFirst() as ~1.2x faster than String.UnicodeScalarView in Swift 3.1
+//  and ~7x faster than String.UnicodeScalarView.Subsequence in swift 3.2 and 4.0
+//
+//  Copyright © 2017 Nick Lockwood. All rights reserved.
 //
 
 import Foundation

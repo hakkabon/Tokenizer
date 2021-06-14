@@ -1,6 +1,6 @@
 //
 //  Trie.swift
-//  Lexer
+//  Tokenizer
 //
 //  Created by Ulf Akerstedt-Inoue on 2019/01/08.
 //

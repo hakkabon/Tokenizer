@@ -1,29 +1,59 @@
+//
+//  Tokenizer.swift
+//  Tokenizer
+//
+//  Created by Ulf Akerstedt-Inoue on 2019/01/08.
+//
+
 import Foundation
 
 public class Tokenizer: Sequence, IteratorProtocol {
-    
+
+    public enum ContextDependent {
+        case none
+        case binary
+        case decimal
+        case octal
+        case hexadecimal
+    }
+
+    public enum IdentifierKind {
+        case char
+        case string
+    }
+
     struct TokenBuffer {
         var tokens: [Token?] = []
         var index = 0
     }
     private var buffer: TokenBuffer = TokenBuffer()
 
+    public var contextDependent: ContextDependent = .none
+    
     fileprivate var characters: UnicodeScalarView
     fileprivate var trie: Trie = Trie()
     private(set) var filterComments: Bool = false
     private(set) var symbols = Set<String>(arrayLiteral: "'", "\"", "//", "/*", "*/")
     private(set) var keywords = Set<String>()
+    private(set) var identifierKind: IdentifierKind = .string
 
-    public init(source: String, buffer size: Int = 5, filterComments filter: Bool = false, symbols: Set<String>, keywords: Set<String>) {
+    public init(source: String,
+                buffer size: Int = 5,
+                filterComments filter: Bool = false,
+                symbols: Set<String>,
+                keywords: Set<String>,
+                identifier: IdentifierKind = .string)
+    {
         buffer = TokenBuffer(tokens: Array(repeating: .none, count: size))
         characters = UnicodeScalarView(source.unicodeScalars)
 
         self.filterComments = filter
-        self.symbols = symbols.union(Set(symbols))
+        self.symbols.formUnion(Set(symbols))
         self.keywords = Set(keywords)
+        self.identifierKind = identifier
 
         // Insert all character-based symbols into the Trie.
-        symbols.forEach { trie.insert(word: $0) }
+        self.symbols.forEach { trie.insert(word: $0) }
         
         // prefill buffer
         for _ in 1...buffer.tokens.count { updateBuffer() }
@@ -35,16 +65,13 @@ public class Tokenizer: Sequence, IteratorProtocol {
     // Generates an array of tokens from a source string.
     public func tokenize() -> [Token] {
         var tokens: [Token] = []
-        while var token = next() {
-            if filterComments {
-                while case .comment(_) = token { token = next() ?? .invalid(.unexpectedEndOfTokens) }
-            }
+        while let token = next() {
+            if case .comment(_) = token { if filterComments { continue } }
             tokens.append(token)
         }
         if !self.characters.isEmpty {
             tokens.append(.invalid(.unrecognizedInput(String(characters))))
         }
-
         return tokens
     }
     
@@ -76,7 +103,7 @@ public class Tokenizer: Sequence, IteratorProtocol {
             }
         }
         
-        // Parsed character(s) may be a symbol or a literal.
+        // Remaining character(s) may contain literals, keywords or comments.
         if let symbol = munchNode.word {
             switch symbol {
             case "'": return characters.parseLiteral(until: "'")
@@ -89,26 +116,67 @@ public class Tokenizer: Sequence, IteratorProtocol {
             }
         } else { // From here on we parse identifiers or numbers.
             if let scalar = characters.first, CharacterSet.alphanumerics.contains(scalar) {
-                if CharacterSet.letters.contains(scalar) {
-                    return characters.parseIdentifier(keywords: self.keywords)
-                } else {
+                switch contextDependent {
+                case .none:
+                    
+                    switch identifierKind {
+                    case .char:
+                        if let ch = self.characters.readCharacter(where: { CharacterSet.letters.contains($0) } ) {
+                            return .char(Character(ch))
+                        } else {
+                            if let number = self.characters.readCharacters(where: {
+                                $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
+                            }) {
+                                return .number(.decimal(number.integerValue ?? 0))
+                            }
+                        }
+                    case .string:
+                        if CharacterSet.letters.contains(scalar) {
+                            return characters.parseIdentifier(keywords: self.keywords)
+                        } else {
+                            if let number = self.characters.readCharacters(where: {
+                                $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
+                            }) {
+                                return .number(.decimal(number.integerValue ?? 0))
+                            }
+                        }
+                    }
+
+                case .binary:
+                    if let number = self.characters.readCharacters(where: {
+                        $0 == UnicodeScalar("0") || $0 == UnicodeScalar("1")
+                    }) {
+                        return .number(.binary(Int(number.binaryValue ?? 0)))
+                    }
+
+                case .decimal:
                     if let number = self.characters.readCharacters(where: {
                         $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
                     }) {
-                        return .number(number)
-//                        switch String(number.prefix(2)) {
-//                        case number.binaryPrefix: return .number(number.binaryValue ?? 0)
-//                        case number.octalPrefix: return .number(number.octalValue ?? 0)
-//                        case number.hexPrefix:return .number(number.hexValue ?? 0)
-//                        default: return .number(number.integerValue ?? 0)
-//                        }
+                        return .number(.decimal(number.integerValue ?? 0))
+                    }
+
+                case .octal:
+                    if let number = self.characters.readCharacters(where: {
+                        $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
+                    }) {
+                        return .number(.octal(number.octalValue ?? 0))
+                    }
+
+                case .hexadecimal:
+                    if let number = self.characters.readCharacters(where: {
+                        $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9") ||
+                        $0 >= UnicodeScalar("A") && $0 <= UnicodeScalar("F") ||
+                        $0 >= UnicodeScalar("a") && $0 <= UnicodeScalar("f")
+                    }) {
+                        return .number(.octal(number.octalValue ?? 0))
                     }
                 }
             }
         }
         return nil
     }
-    
+
     /// Returns true if input string has been processed.
     public var isEmpty: Bool {
         return characters.isEmpty
@@ -143,12 +211,14 @@ extension UnicodeScalarView {
     }
     
     /// Read characters until closing comment marker '*/' character is matched.
+    /// Small bug: Character following a `*` is never copied when the comment match
+    /// fails.
     mutating func parseBlockComment(match symbol: String) -> Token? {
         let start = self
         var string = ""
         while let scalar = self.popFirst() {
             if scalar == "*" {
-                if self.popFirst() == "/" {
+               if let next = self.popFirst(), next == "/" {
                     return .comment(string)
                 }
             }
@@ -171,14 +241,15 @@ extension UnicodeScalarView {
         return .invalid(.unterminatedString)
     }
         
-    // parses a token containing any consecutive digit (0-9) characters, or nil
+    // Parses a token containing any consecutive digit (0-9) characters, or nil
     mutating func parseDigit() -> Token? {
         return readCharacters(where: {
             $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
         })
-            .map { .number($0) }
+            .map { .number(.decimal($0.integerValue ?? 0)) }
     }
     
+    // Parses identifier lexically conforming to [A-Za-z] ( [A-Za-z_] | [0-9] )*
     mutating func parseIdentifier(keywords: Set<String>) -> Token? {
         guard let head = self.first, CharacterSet.letters.contains(head) else { return nil }
         

@@ -1,3 +1,10 @@
+//
+//  UnicodeScalarView+Extensions.swift
+//  Tokenizer
+//
+//  Copyright © 2017 Nick Lockwood. All rights reserved.
+//
+
 import Foundation
 
 extension UnicodeScalarView {
