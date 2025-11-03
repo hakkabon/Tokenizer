@@ -1,8 +1,9 @@
 //
-//  Trie.swift
+//  TokenizerTrie.swift
 //  Tokenizer
 //
 //  Created by Ulf Akerstedt-Inoue on 2019/01/08.
+//  Copyright © 2019 hakkabon software. All rights reserved.
 //
 
 import Foundation
@@ -109,7 +110,7 @@ extension Trie {
         return subtrieWords
     }
 
-    func walkSequence(for char: Character?, nextCharacter: @escaping ((Node) -> Character?) ) -> (Node, word: String?) {
+    func longestMatch(for char: Character?, nextCharacter: @escaping ((Node) -> Character?) ) -> (Node, word: String?) {
         var word: String = ""
         
         func next(node: Node, character ch: Character?) -> Node {
@@ -121,13 +122,13 @@ extension Trie {
             }
         }
 
-        guard let char = char else { return (root,nil) }
+        guard let char = char else { return (root, nil) }
         
         if let child = root.children[char] {
             word.append(char)
-            return (next(node: child, character: nextCharacter(child)),word)
+            return (next(node: child, character: nextCharacter(child)), word)
         } else {
-            return (root,nil)
+            return (root, nil)
         }
     }
 }

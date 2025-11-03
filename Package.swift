@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -9,16 +9,15 @@ let package = Package(
         .library(name: "Tokenizer", targets: ["Tokenizer"]),
     ],
     dependencies: [
-        .package(name: "Files", url: "https://github.com/johnsundell/files.git", from: "2.2.1"),
-        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
     ],
     targets: [
         .target(name: "Tokenizer", dependencies: []),
-        .target(name: "tokens", dependencies: [
-                    "Tokenizer",
-                    "Files",
-                    .product(name: "ArgumentParser", package: "swift-argument-parser")
-        ]),
         .testTarget(name: "TokenizerTests", dependencies: ["Tokenizer"]),
+        .executableTarget(name: "tokenize",
+            dependencies: [
+                "Tokenizer",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ]),
     ]
 )

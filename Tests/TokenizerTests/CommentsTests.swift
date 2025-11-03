@@ -1,57 +1,34 @@
-import XCTest
+import Testing
 @testable import Tokenizer
 
-final class CommentsTests: XCTestCase {
-
-    let symbols: [String] = ["|", ".", "¶", ">", "#", "-", "{","[", "<", "(", "+", "'", "}", "]", ")", ";", "*"]
+@Test
+func testLineComment() async throws {
+    let symbols: [String] = []
     let keywords: [String] = []
-    
-    func testFilterLineComment() throws {
-        let input = """
-        // Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        """
-        let tokenizer = Tokenizer(source: input, filterComments: true, symbols: Set(symbols), keywords: Set(keywords))
-        let tokens = tokenizer.tokenize()
-        XCTAssertTrue(tokenizer.isEmpty)
-        XCTAssertEqual(tokens, [])
-    }
+    let input = """
+    // Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+    """
+    let tokenizer = Tokenizer(input, symbols: Set(symbols), keywords: Set(keywords))
+    let tokens = tokenizer.tokenize()
+    #expect(tokenizer.isEmpty == true)
+    #expect(tokens == [
+        Token(type: .comment(" Lorem ipsum dolor sit amet, consectetur adipiscing elit."), range:  input.index(input.startIndex, offsetBy: +2) ..< input.endIndex)
+    ])
+}
 
-    func testLineComment() throws {
-        let input = """
-        // Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        """
-        let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords))
-        let tokens = tokenizer.tokenize()
-        XCTAssertTrue(tokenizer.isEmpty)
-        XCTAssertEqual(tokens, [.comment(" Lorem ipsum dolor sit amet, consectetur adipiscing elit.")])
-    }
-
-    func testFilterBlockComment() throws {
-        let input = """
-        /*
-         * Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-         * incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-         * nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-         */
-        
-        """
-        let tokenizer = Tokenizer(source: input, filterComments: true, symbols: Set(symbols), keywords: Set(keywords))
-        let tokens = tokenizer.tokenize()
-        XCTAssertTrue(tokenizer.isEmpty)
-        XCTAssertEqual(tokens, [])
-    }
-
-    func testBlockComment() throws {
-        let input = """
-        /*
-         * Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-         * incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-         * nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-         */
-        """
-        let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords))
-        let tokens = tokenizer.tokenize()
-        XCTAssertTrue(tokenizer.isEmpty)
-        XCTAssertTrue(tokens.count == 1)
-    }
+@Test
+func testBlockComment() async throws {
+    let symbols: [String] = []
+    let keywords: [String] = []
+    let input = """
+    /*
+     * Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+     * incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+     * nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+     */
+    """
+    let tokenizer = Tokenizer(input, symbols: Set(symbols), keywords: Set(keywords))
+    let tokens = tokenizer.tokenize()
+    #expect(tokenizer.isEmpty == true)
+    #expect(tokens.count == 1)
 }

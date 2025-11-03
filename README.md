@@ -1,7 +1,30 @@
 # Tokenizer
 
 ## A tokenizer written in the Swift programming language.
-Simple tool that may come handy when you need split a longer string into smaller pices that corresponds to known symbols and keywords. First, specify all known symbols and keywords and provide the input string to be tokenized.
+
+A tokenizer is typically implemented as a structure or class that iterates through an input string, identifying and extracting meaningful sequences of characters (tokens) based on a set of rules.
+Here is a simple, illustrative example of a basic tokenizer for arithmetic expressions.
+
+#### Basic Arithmetic Tokenizer Example
+
+This example demonstrates tokenizing a simple string like `10 + 2 * (3 - 1)` into its components.
+
+Output of the Example
+
+```swift
+number: 'decimal(10)' location: (start: 0, end: 2)
+symbol: '+' location: (start: 3, end: 4)
+number: 'decimal(2)' location: (start: 5, end: 6)
+symbol: '*' location: (start: 7, end: 8)
+symbol: '(' location: (start: 9, end: 10)
+number: 'decimal(3)' location: (start: 10, end: 11)
+symbol: '-' location: (start: 12, end: 13)
+number: 'decimal(1)' location: (start: 14, end: 15)
+symbol: ')' location: (start: 15, end: 16)
+```
+
+Below are examples of how the library is used within Swift source code.
+This library may come handy when you need split a longer string into smaller pices that corresponds to known symbols and keywords. First, specify all known symbols and keywords and provide the input string to be tokenized.
 
 ```swift
   let symbols = ["|", "\\", "^", ":", ",", "$", ".", "\"", "¶", ">", "#", "-", "{","[", "<", "(",
@@ -23,7 +46,7 @@ Alphanumeric identifiers can be recognized character by character.
 
 ```swift
   let input = "abc"
-  let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords), identifier: .char)
+  let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords), lexeme:: .char)
   let tokens = tokenizer.tokenize() // [.char("a"), .char("b"), .char("c")]
 ```
 
@@ -45,7 +68,7 @@ Tokens can be extracted by using Swift-style pattern matching and by using look-
 
 ```swift
   let input = "[a-z]"
-  let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords))
+  let tokenizer = Tokenizer(source: input, symbols: Set(symbols), keywords: Set(keywords), lexeme:: .char)
 	
   if tokenizer.peek(ahead: 1) == .symbol("[") { tokenizer.consume() }
   if case let .symbol(sym) = tokenizer.next() { /* ... */ }

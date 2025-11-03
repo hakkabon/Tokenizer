@@ -41,7 +41,11 @@ public struct UnicodeScalarView {
     public var isEmpty: Bool {
         return startIndex == endIndex
     }
-    
+
+    public var range: Range<String.Index> {
+        return (startIndex ..< endIndex)
+    }
+
     public subscript(_ index: Index) -> UnicodeScalar {
         return characters[index]
     }
