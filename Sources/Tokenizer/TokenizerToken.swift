@@ -15,6 +15,11 @@ public struct Token {
     // This provides the position data without storing a bulky SourceLocation struct
     public let range: Range<String.Index>
     
+    public init(type: TokenType, range: Range<String.Index>) {
+        self.type = type
+        self.range = range
+    }
+    
     // Helper to get the actual location information from the range (aka. pretty print range),
     // requires access to the original string.
     public func location(in input: String) -> (start: Int, end: Int) {
@@ -22,9 +27,6 @@ public struct Token {
         let startOffset = input.distance(from: input.startIndex, to: range.lowerBound)
         let endOffset = input.distance(from: input.startIndex, to: range.upperBound)
         
-        // Determine the length (if needed)
-//        let length = input.distance(from: range.lowerBound, to: range.upperBound)
-
         return (start: startOffset, end: endOffset)
     }
 }

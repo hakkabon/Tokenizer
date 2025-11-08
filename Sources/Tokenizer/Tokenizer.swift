@@ -74,11 +74,6 @@ public class Tokenizer: TokenBufferDelegate {
         case string
     }
 
-    // Input source character.
-//    var source: String = ""
-
-//    private var currentIndex: String.Index
-
     // Input source character transformed to `UnicodeScalarView`s.
     var characters: UnicodeScalarView
 
