@@ -17,6 +17,7 @@ public enum TokenType: Equatable, Hashable {
     case number(Numerical)      // any number defined as [0-9]*
     case comment(String)        // single-line: // ... or # ... multi-line: /* ... */ or (* ... *)
     case space(Int)             // white space characters
+    case eof                    // marks end of token stream, which means that "End of Text" or "End of Medium" has been reached
     case invalid(TokenError)    // not valid symbol of any kind 'unrecognized'
 
     public var value: String {
@@ -29,6 +30,7 @@ public enum TokenType: Equatable, Hashable {
         case .number(let lexeme): return "\(lexeme)"
         case .comment(let lexeme): return lexeme
         case .space(let lexeme): return "\(lexeme)"
+        case .eof: return "¶"
         case .invalid(let lexeme): return "\(lexeme)"
         }
     }
@@ -47,6 +49,7 @@ extension TokenType: CustomStringConvertible {
         case .comment(let lexeme): return "comment: '\(lexeme)'"
         case .space(let lexeme):
             return Array(repeating: " ", count: lexeme).joined()
+        case .eof: return "eof: ¶"
         case .invalid(let lexeme): return "imvalid: '\(lexeme)'"
         }
     }

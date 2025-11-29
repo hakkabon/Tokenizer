@@ -9,6 +9,7 @@
 import Foundation
 
 protocol TokenBufferDelegate {
+    var characters: UnicodeScalarView { get }
     func nextToken() -> Token?
 }
 
@@ -22,6 +23,11 @@ extension Tokenizer: Sequence, IteratorProtocol {
     /// Return a single token, or nil.
     public func next() -> Token? {
         return tokens.next()
+    }
+
+    /// Return a single token. The `eof` token marks end of token stream.
+    public func get() -> Token {
+        return tokens.get()
     }
 }
 
@@ -53,6 +59,13 @@ public class Tokenizer: TokenBufferDelegate {
             let token = buffer[index]
             updateBuffer()
             return token
+        }
+
+        /// Provides the next token from the buffer and increments current index.
+        mutating func get() -> Token {
+            let token = buffer[index]
+            updateBuffer()
+            return token ?? Token(type: .eof, range: (delegate?.characters.endIndex)! ..< (delegate?.characters.endIndex)!)
         }
 
         /// Consumes one token from the buffer of tokens.
