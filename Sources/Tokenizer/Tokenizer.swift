@@ -97,7 +97,7 @@ public class Tokenizer: TokenBufferDelegate {
     fileprivate var trie: Trie = Trie()
 
     // Always keep a default set of symbols for identifying literals, line comments and block comments.
-    private(set) var symbols = Set<String>(arrayLiteral: ".", ";", ":", "'", "\"", "#", "//", "/*", "*/", "(*", "*)")
+    private(set) var symbols = Set<String>(arrayLiteral: ".", ";", ":", "'", "\"", "#", "/", "//", "/*", "*/", "(*", "*)")
 
     // No default set of keywords.
     private(set) var keywords = Set<String>()
@@ -164,6 +164,7 @@ public class Tokenizer: TokenBufferDelegate {
             switch symbol {
             case "'": return characters.parseLiteral(until: "'")
             case "\"": return characters.parseLiteral(until: "\"")
+            case "/": return characters.parseRegexDefinition(until: "/")
             case "#": return characters.parseLineComment()
             case "//": return characters.parseLineComment()
             case "/*": return characters.parseBlockComment(match: "*/")
@@ -211,7 +212,7 @@ public class Tokenizer: TokenBufferDelegate {
         tokens.consume()
     }
 
-    /// Peek at current character for a symbol match.
+    /// Peek `n` tokens ahead of current token.
     public func peek(ahead n: Int) -> Token? {
         return tokens.peek(ahead: n)
     }
@@ -219,6 +220,21 @@ public class Tokenizer: TokenBufferDelegate {
 
 extension UnicodeScalarView {
 
+    /// Read characters until enclosing forward-slash character is matched.
+    mutating func parseRegexDefinition(until terminator: Unicode.Scalar) -> Token? {
+        var string = ""
+        let startIndex = self.startIndex
+        while let scalar = self.popFirst() {
+            switch scalar {
+            case terminator:
+                return Token(type: .regex(string), range: startIndex ..< self.index(self.startIndex, offsetBy: -1))
+            default:
+                string.append(Character(scalar))
+            }
+        }
+        return Token(type: .invalid(.unterminatedString(string)), range: startIndex ..< self.startIndex)
+    }
+    
     /// Read characters until any newline character is matched.
     mutating func parseLineComment() -> Token? {
         let startIndex = self.startIndex
@@ -237,7 +253,7 @@ extension UnicodeScalarView {
         while let scalar = self.popFirst() {
             if scalar == symbolUnicodeScalars[0] {
                if let next = self.popFirst(), next == symbolUnicodeScalars[1] {
-                   return Token( type: .comment(string), range: start.startIndex ..< self.endIndex)
+                   return Token(type: .comment(string), range: start.startIndex ..< self.endIndex)
                 }
             }
             string.append(Character(scalar))
