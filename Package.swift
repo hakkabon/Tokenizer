@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "Tokenizer", targets: ["Tokenizer"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.2"),
     ],
     targets: [
         .target(name: "Tokenizer", dependencies: []),
