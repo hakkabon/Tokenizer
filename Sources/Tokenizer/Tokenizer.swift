@@ -156,7 +156,12 @@ public class Tokenizer: TokenBufferDelegate {
 
         // Inspect matched symbol sequence: we may have a complete symbol match or we may have
         // matched the beginning of a literal or comment, in which case we proceed with further
+<<<<<<< HEAD
         // parsing to complete the token. The character view will only be consumed when matched.
+=======
+        // parsing to complete the token.
+        // Pass the view directly. It will only consume what it matches.
+>>>>>>> 9b22bf34797c4ffb2f552dd4f06f85b60b8d211f
         if let symbolScalars = trie.longestMatch(in: &characters) {
             let symbol = String(symbolScalars)
             switch symbol {
