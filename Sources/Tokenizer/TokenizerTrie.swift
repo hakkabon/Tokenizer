@@ -8,6 +8,145 @@
 
 import Foundation
 
+/// An immutable, recursive Trie implementation.
+public indirect enum Trie<Element: Hashable> {
+    case empty
+    case node(isTerminating: Bool, children: [Element: Trie<Element>])
+}
+
+extension Trie {
+
+    /// Returns a NEW Trie containing the inserted sequence.
+    public func inserting<S: Sequence>(_ sequence: S) -> Trie<Element> where S.Element == Element {
+        var generator = sequence.makeIterator()
+        return inserting(&generator)
+    }
+
+    private func inserting<I: IteratorProtocol>(_ iterator: inout I) -> Trie<Element> where I.Element == Element {
+        guard let head = iterator.next() else {
+            // End of sequence: mark this node as terminating
+            switch self {
+            case .empty:
+                return .node(isTerminating: true, children: [:])
+            case .node(_, let children):
+                return .node(isTerminating: true, children: children)
+            }
+        }
+
+        // Recursive step: update or create the child node
+        var children: [Element: Trie<Element>] = switch self {
+            case .node(_, let c): c
+            case .empty: [:]
+        }
+
+        let child = children[head, default: Trie.empty].inserting(&iterator)
+        children[head] = child
+        
+        // Note: If self was empty, it wasn't terminating previously, so isTerminating is false.
+        return .node(isTerminating: self.isTerminating, children: children)
+    }
+
+    var isTerminating: Bool {
+        if case .node(let isTerminating, _) = self { return isTerminating }
+        return false
+    }
+}
+
+extension Trie {
+
+    /// Lists all valid sequences (words) contained in the Trie.
+    public var words: [[Element]] {
+        func discover(from node: Trie<Element>, path: [Element]) -> [[Element]] {
+            guard case let .node(isTerminating, children) = node else { return [] }
+            
+            var results = isTerminating ? [path] : []
+            for (element, child) in children {
+                results += discover(from: child, path: path + [element])
+            }
+            return results
+        }
+        return discover(from: self, path: [])
+    }
+}
+
+extension Trie {
+
+    /// Finds the longest matching sequence from a UnicodeScalarView without
+    /// prematurely consuming non-matching scalars.
+    public func longestMatch(in scalars: inout UnicodeScalarView) -> [Element]? where Element == Character {
+        var currentTrie = self
+        var bestMatchEndIndex = scalars.startIndex
+        var longestPath: [Element] = []
+        
+        var currentIndex = scalars.startIndex
+        var currentPath: [Element] = []
+
+        while currentIndex < scalars.endIndex {
+            // If the current node marks a valid word, remember this position
+            if currentTrie.isTerminating {
+                bestMatchEndIndex = currentIndex
+                longestPath = currentPath
+            }
+
+            let scalar = Character(scalars[currentIndex])
+            
+            // Try to move deeper
+            if case let .node(_, children) = currentTrie, let nextTrie = children[scalar] {
+                currentPath.append(scalar)
+                currentTrie = nextTrie
+                currentIndex = scalars.index(after: currentIndex)
+            } else {
+                break
+            }
+        }
+
+        // Final check for termination at the very end of the string
+        if currentTrie.isTerminating {
+            bestMatchEndIndex = currentIndex
+            longestPath = currentPath
+        }
+
+        // Maximum Munch: Advance the actual view only to the end of the best match
+        if !longestPath.isEmpty || self.isTerminating {
+//            scalars.removeFirst(scalars.distance(from: scalars.startIndex, to: bestMatchEndIndex))
+            scalars.removeUntil(bestMatchEndIndex)
+            return longestPath
+        }
+
+        return nil
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if false
+
 class TrieNode<T: Hashable> {
     var value: T?
     weak var parent: TrieNode?
@@ -132,3 +271,5 @@ extension Trie {
         }
     }
 }
+
+#endif

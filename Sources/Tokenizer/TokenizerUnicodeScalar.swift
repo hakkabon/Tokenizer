@@ -1,5 +1,5 @@
 //
-//  UnicodeScalarView.swift
+//  TokenizerUnicodeScalar.swift
 //  Tokenizer
 //
 //  This is a really simple drop-in replacement for String.UnicodeScalarView
@@ -73,6 +73,10 @@ public struct UnicodeScalarView {
     }
     
     public func prefix(upTo index: Index) -> UnicodeScalarView {
+        // Safety check: ensure the index is actually forward from the current start
+        precondition(index >= startIndex, "Cannot remove backward; target index is before startIndex")
+        precondition(index <= endIndex, "Target index is out of bounds")
+
         var view = UnicodeScalarView(characters)
         view.startIndex = startIndex
         view.endIndex = index
@@ -109,9 +113,29 @@ public struct UnicodeScalarView {
     
     /// Will crash if n > remaining char count
     public mutating func removeFirst(_ n: Int = 1) {
-        startIndex = characters.index(startIndex, offsetBy: n)
+        // Basic non-negative check (O(1))
+        precondition(n >= 0, "Number of elements to remove should be non-negative")
+        
+        // Efficient bounds check (O(min(n, count)))
+        // We try to advance by n, but stop if we hit endIndex.
+        // If it returns nil, it means n was greater than the available elements.
+        let newIndex = characters.index(startIndex, offsetBy: n, limitedBy: endIndex)
+        
+        precondition(newIndex != nil, "Index out of range: can't remove \(n) elements")
+        
+        // Update the state
+        startIndex = newIndex!
     }
-    
+
+    /// Will crash if n > remaining char count
+    public mutating func removeUntil(_ index: Index) {
+        // Safety check: ensure the index is actually forward from the current start
+        precondition(index >= startIndex, "Cannot remove backward; target index is before startIndex")
+        precondition(index <= endIndex, "Target index is out of bounds")
+
+        startIndex = index
+    }
+
     /// Will crash if collection is empty
     @discardableResult
     public mutating func removeFirst() -> UnicodeScalar {

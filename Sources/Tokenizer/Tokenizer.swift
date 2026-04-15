@@ -93,8 +93,8 @@ public class Tokenizer: TokenBufferDelegate {
     // Tokens are accessed via a buffer of variable length.
     private var tokens: TokenBuffer
 
-    // Symbols and keywords and stored and matched using a Trie.
-    fileprivate var trie: Trie = Trie()
+    // Symbols are matched using a Trie.
+    private var trie = Trie<Character>.empty
 
     // Always keep a default set of symbols for identifying literals, line comments and block comments.
     private(set) var symbols = Set<String>(arrayLiteral: ".", ";", ":", "'", "\"", "#", "/", "//", "/*", "*/", "(*", "*)")
@@ -118,7 +118,10 @@ public class Tokenizer: TokenBufferDelegate {
         self.tokens.delegate = self
 
         // Insert all character-based symbols into the Trie.
-        self.symbols.forEach { trie.insert(word: $0) }
+        self.symbols.forEach { symbol in
+            trie = trie.inserting(symbol)
+        }
+
         // Token buffer has to be initialized last, after all symbols and keywords are inserted into the Trie.
         self.tokens.initialize()
     }
@@ -150,17 +153,12 @@ public class Tokenizer: TokenBufferDelegate {
 
         // Match any symbol as long as possible (munch principle).
         let munchIndex = characters.startIndex
-        guard let char = characters.first else { return nil }
-        let munchNode = trie.longestMatch(for: Character(char)) { (node) in
-            // if first `char` matched, try next character from characters, if there is any.
-            self.characters.removeFirst()
-            return self.characters.first != nil ? Character(self.characters.first!) : nil
-        }
 
         // Inspect matched symbol sequence: we may have a complete symbol match or we may have
         // matched the beginning of a literal or comment, in which case we proceed with further
-        // parsing to complete the token.
-        if let symbol = munchNode.word {
+        // parsing to complete the token. The character view will only be consumed when matched.
+        if let symbolScalars = trie.longestMatch(in: &characters) {
+            let symbol = String(symbolScalars)
             switch symbol {
             case "'": return characters.parseLiteral(until: "'")
             case "\"": return characters.parseLiteral(until: "\"")
@@ -215,141 +213,5 @@ public class Tokenizer: TokenBufferDelegate {
     /// Peek `n` tokens ahead of current token.
     public func peek(ahead n: Int) -> Token? {
         return tokens.peek(ahead: n)
-    }
-}
-
-extension UnicodeScalarView {
-
-    /// Read characters until enclosing forward-slash character is matched.
-    mutating func parseRegexDefinition(until terminator: Unicode.Scalar) -> Token? {
-        var string = ""
-        let startIndex = self.startIndex
-        while let scalar = self.popFirst() {
-            switch scalar {
-            case terminator:
-                return Token(type: .regex(string), range: startIndex ..< self.index(self.startIndex, offsetBy: -1))
-            default:
-                string.append(Character(scalar))
-            }
-        }
-        return Token(type: .invalid(.unterminatedString(string)), range: startIndex ..< self.startIndex)
-    }
-    
-    /// Read characters until any newline character is matched.
-    mutating func parseLineComment() -> Token? {
-        let startIndex = self.startIndex
-        return readCharacters(where: {
-            !CharacterSet.newlines.contains($0)
-        })
-        .map { Token(type: .comment($0), range: startIndex ..< self.startIndex) }
-    }
-    
-    /// Read characters until closing comment marker '*/' or '*)' character is matched.
-    mutating func parseBlockComment(match symbol: String) -> Token? {
-        precondition(symbol.unicodeScalars.count == 2)
-        let symbolUnicodeScalars = Array(symbol.unicodeScalars)
-        let start = self
-        var string = ""
-        while let scalar = self.popFirst() {
-            if scalar == symbolUnicodeScalars[0] {
-               if let next = self.popFirst(), next == symbolUnicodeScalars[1] {
-                   return Token(type: .comment(string), range: start.startIndex ..< self.endIndex)
-                }
-            }
-            string.append(Character(scalar))
-        }
-        self = start
-        return nil
-    }
-
-    // Parse character token containing exactly one character.
-    mutating func parseCharacter() -> Token? {
-        let startIndex = self.startIndex
-        guard let ch = readCharacter(where: { CharacterSet.letters.contains($0) } ) else {
-            return nil
-        }
-        return Token(type: .char(Character(ch)), range: startIndex ..< self.startIndex)
-    }
-
-    // Parse literal string containing any character until closing `terminator` character is matched.
-    mutating func parseLiteral(until terminator: Unicode.Scalar) -> Token? {
-        var string = ""
-        let startIndex = self.startIndex
-        while let scalar = self.popFirst() {
-            switch scalar {
-            case terminator:
-                return Token(type: .literal(string), range: startIndex ..< self.index(self.startIndex, offsetBy: -1))
-            default:
-                string.append(Character(scalar))
-            }
-        }
-        return Token(type: .invalid(.unterminatedString(string)), range: startIndex ..< self.startIndex)
-    }
-        
-    // Parses a token containing any consecutive digit (0-9) characters, or nil
-    mutating func parseDigits() -> Token? {
-        let startIndex = self.startIndex
-        return readCharacters(where: {
-            $0 >= UnicodeScalar("0") && $0 <= UnicodeScalar("9")
-        })
-        .map { Token(type: .number(.decimal($0.integerValue ?? 0)), range: startIndex ..< self.startIndex) }
-    }
-    
-    // Parses identifier lexically conforming to [A-Za-z] ( [A-Za-z_-] | [0-9] )*
-    mutating func parseIdentifier(keywords: Set<String>) -> Token? {
-        guard let head = self.first, CharacterSet.letters.contains(head) else { return nil }
-        
-        let startIndex = self.startIndex
-        var name = String(self.removeFirst())
-        while let c = self.first, CharacterSet.alphanumerics.contains(c) || c == "_" || c == "-" {
-            name.append(Character(self.removeFirst()))
-        }
-        
-        if keywords.contains(name) {
-            return Token(type: .keyword(name), range: startIndex ..< self.startIndex)
-        } else {
-            return Token(type: .identifier(name), range: startIndex ..< self.startIndex)
-        }
-    }
-}
-
-extension UnicodeScalarView {
-
-    mutating func skipWhitespace() {
-        let whitespace = CharacterSet.whitespacesAndNewlines
-        while let scalar = self.first, whitespace.contains(scalar) {
-            self.removeFirst()
-        }
-    }
-
-    mutating func readCharacter(where matching: (UnicodeScalar) -> Bool = { _ in true }) -> UnicodeScalar? {
-        guard let char = first, matching(char) else { return nil }
-        let index = self.index(after: startIndex)
-        self = suffix(from: index)
-        return char
-    }
-    
-    mutating func readCharacters(where matching: (UnicodeScalar) -> Bool) -> String? {
-        var index = startIndex
-        var count = 0
-        
-        while index < endIndex {
-            if !matching(self[index]) {
-                break
-            }
-            index = self.index(after: index)
-            count += 1
-        }
-        
-        if index > startIndex {
-            let string = String(prefix(upTo: index))
-            self = suffix(from: index)
-            return string
-        }
-        return nil
-    }
-    
-    func extractSubstring(source: UnicodeScalarView, from range: Range<String.Index>) -> String {
-        return String(source[range.lowerBound ..< range.upperBound])
     }
 }
